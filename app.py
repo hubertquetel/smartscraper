@@ -12,7 +12,7 @@ def scrape():
         return jsonify({"error": "Missing URL"}), 400
 
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
         page = browser.new_page()
         page.goto(url, timeout=60000)
         html = page.content()
