@@ -18,19 +18,16 @@ def scrape():
         page = browser.new_page()
         page.goto(url, wait_until="networkidle")
 
-        # Attendre une section utile s’il y en a une (ajustable)
         try:
-            page.wait_for_selector('main', timeout=10000)
-            html = page.locator('main').inner_html()
+            page.wait_for_selector("main", timeout=10000)
+            html = page.locator("main").inner_html()
         except:
             html = page.content()
 
         browser.close()
 
-        # Extraction en markdown
-        doc = Document(html)
-        simplified_html = doc.summary()
-        markdown = markdownify.markdownify(simplified_html, heading_style="ATX")
+        # PAS DE readability, on markdownifie directement le HTML extrait
+        markdown = markdownify.markdownify(html, heading_style="ATX")
 
         return jsonify({'url': url, 'markdown': markdown})
 
