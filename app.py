@@ -14,16 +14,17 @@ def scrape():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-        page = browser.new_page()
+        page = browser.new_page(
+            viewport={"width": 1920, "height": 1080},
+            device_scale_factor=2
+        )
         page.goto(url, wait_until="networkidle")
 
         # Supprime les bannières de cookies (iubenda, OneTrust, Didomi…)
         page.evaluate("""
-            // iubenda
             const iubenda = document.getElementById('iubenda-cs-banner');
             if (iubenda) iubenda.remove();
 
-            // autres bannières courantes
             ['cookie-banner', 'cookie-consent', 'onetrust-banner-sdk'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.remove();
@@ -57,7 +58,10 @@ def screenshot():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-        page = browser.new_page()
+        page = browser.new_page(
+            viewport={"width": 1920, "height": 1080},
+            device_scale_factor=2
+        )
         page.goto(url, wait_until="networkidle")
 
         # Supprime les bannières cookies
