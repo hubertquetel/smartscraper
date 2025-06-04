@@ -7,6 +7,30 @@ import os
 
 app = Flask(__name__)
 
+def init_browser(p):
+    return p.chromium.launch(
+        headless=True,
+        args=[
+            "--no-sandbox",
+            "--disable-blink-features=AutomationControlled"
+        ]
+    )
+
+def setup_page(context, url):
+    page = context.new_page()
+    page.goto(url, wait_until="networkidle")
+
+    # Accepter les cookies si le bouton est détecté
+    try:
+        page.locator("button:has-text('Accepter')").first.click(timeout=3000)
+    except:
+        pass  # pas de popup cookies
+
+    # Scroll jusqu'en bas pour forcer le chargement d’éléments lazy
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    page.wait_for_timeout(3000)  # attendre 3s pour laisser finir les chargements
+    return page
+
 @app.route('/scrape')
 def scrape():
     url = request.args.get('url')
@@ -14,9 +38,14 @@ def scrape():
         return jsonify({'error': 'Missing URL'}), 400
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-        page = browser.new_page()
-        page.goto(url, wait_until="networkidle")
+        browser = init_browser(p)
+        context = browser.new_context(
+            viewport={"width": 1280, "height": 1920},
+            device_scale_factor=2,
+            is_mobile=False,
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        )
+        page = setup_page(context, url)
 
         try:
             page.wait_for_selector("main", timeout=10000)
@@ -26,11 +55,9 @@ def scrape():
 
         browser.close()
 
-        # PAS DE readability, on markdownifie directement le HTML extrait
         markdown = markdownify.markdownify(html, heading_style="ATX")
 
         return jsonify({'url': url, 'markdown': markdown})
-
 
 @app.route('/screenshot')
 def screenshot():
@@ -41,9 +68,14 @@ def screenshot():
         return jsonify({'error': 'Missing URL'}), 400
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-        page = browser.new_page()
-        page.goto(url, wait_until="networkidle")
+        browser = init_browser(p)
+        context = browser.new_context(
+            viewport={"width": 1280, "height": 1920},
+            device_scale_factor=2,
+            is_mobile=False,
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        )
+        page = setup_page(context, url)
 
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
             page.screenshot(path=tmp.name, full_page=fullpage)
@@ -53,7 +85,6 @@ def screenshot():
 
         return send_file(tmp_path, mimetype='image/png', as_attachment=False)
 
-# Optional index
 @app.route('/')
 def index():
     return '''
